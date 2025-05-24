@@ -1,4 +1,9 @@
-# Logs
+# Outputs
+cookies.json
+highlights.json
+
+# Node & dependencies
+node_modules/# Logs
 logs
 *.log
 npm-debug.log*
