@@ -6,7 +6,7 @@ A Node.js tool to automatically scrape and export your Kindle highlights and not
 
 - 📚 Automatically scrapes all books in your Kindle library
 - 🔐 Handles Amazon login (with 2FA support)
-  - Requires manual 2fa for now
+  - Requires manual 2FA for now (you will need to enter the 2FA code sent to your device during login; ensure your device is accessible and check spam/junk folders if you don't receive the code)
 - 🍪 Saves session cookies to avoid frequent re-logins
 - 📝 Exports highlights to JSON format
 - 🐛 Debug mode for troubleshooting

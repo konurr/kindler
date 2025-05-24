@@ -131,6 +131,7 @@ const COOKIES_PATH = "./cookies.json";
   }
 
   if (DEBUG) {
+    console.log("🐛 Debug mode enabled: displaying highlights JSON");
     console.log(JSON.stringify(allHighlights, null, 2));
   }
   fs.writeFileSync(
