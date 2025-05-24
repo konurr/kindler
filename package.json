@@ -2,11 +2,12 @@
 	"name": "kindler",
 	"version": "1.0.0",
 	"description": "Scrape Kindle highlights and notes",
-	"main": "kindler.js",
+	"main": "src/index.js",
 	"scripts": {
-		"start": "node kindler.js",
-		"debug": "DEBUG=true node kindler.js",
-		"format": "prettier --write ."
+		"start": "node src/index.js",
+		"debug": "DEBUG=true node src/index.js",
+		"format": "prettier --write .",
+		"lint": "eslint ."
 	},
 	"dependencies": {
 		"dotenv": "^16.5.0",
