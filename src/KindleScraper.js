@@ -33,14 +33,19 @@ class KindleScraper {
 			const totalBooks = await this.scraper.getTotalBooks();
 			const allHighlights = [];
 
+			// Navigate to library and retrieve book list once
+			await this.page.goto(CONFIG.LOGIN_URL, { waitUntil: "networkidle2" });
+			await this.page.waitForSelector(".kp-notebook-library-each-book");
+			const books = await this.page.$$(".kp-notebook-library-each-book");
+
 			// Iterate through books
 			for (let i = 0; i < totalBooks; i++) {
 				console.log(`📖 Opening book ${i + 1}/${totalBooks}`);
 
-				// Go back to library and re-select
-				await this.page.goto(CONFIG.LOGIN_URL, { waitUntil: "networkidle2" });
-				await this.page.waitForSelector(".kp-notebook-library-each-book");
-				const books = await this.page.$$(".kp-notebook-library-each-book");
+				if (!books[i]) {
+					console.warn(`⚠️ Book ${i + 1} not found—skipping.`);
+					continue;
+				}
 
 				if (!books[i]) {
 					console.warn(`⚠️ Book ${i + 1} not found—skipping.`);
