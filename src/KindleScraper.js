@@ -34,8 +34,12 @@ class KindleScraper {
 			const allHighlights = [];
 
 			// Navigate to library and retrieve book list once
-			await this.page.goto(CONFIG.LOGIN_URL, { waitUntil: "networkidle2" });
-			await this.page.waitForSelector(SELECTORS.BOOK_LIST);
+			// Check if already logged in to avoid unnecessary reloads
+			const isLoggedIn = await this.auth.isLoggedIn();
+			if (!isLoggedIn) {
+				await this.page.goto(CONFIG.LOGIN_URL, { waitUntil: "networkidle2" });
+				await this.page.waitForSelector(SELECTORS.BOOK_LIST);
+			}
 			const books = await this.page.$$(SELECTORS.BOOK_LIST);
 
 			// Iterate through books
