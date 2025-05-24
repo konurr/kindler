@@ -12,14 +12,12 @@ class BookScraper {
 	}
 
 	async getBookMetadata(bookElement) {
-		return bookElement.evaluate((book) => {
+		return bookElement.evaluate((book, selectors) => {
 			const asin = book.id;
-			const titleEl = book.querySelector("h2.kp-notebook-searchable");
-			const authorEl = book.querySelector("p.kp-notebook-searchable");
-			const imgEl = book.querySelector("img.kp-notebook-cover-image");
-			const dateInput = book.querySelector(
-				'input[id^="kp-notebook-annotated-date-"]'
-			);
+			const titleEl = book.querySelector(selectors.BOOK_TITLE);
+			const authorEl = book.querySelector(selectors.BOOK_AUTHOR);
+			const imgEl = book.querySelector(selectors.BOOK_COVER);
+			const dateInput = book.querySelector(selectors.BOOK_DATE);
 
 			const fullTitle = titleEl?.innerText.trim() || "Untitled";
 			const [title, subtitle] = fullTitle.split(/[:—-]/).map((t) => t.trim());
@@ -29,7 +27,7 @@ class BookScraper {
 			const dateAdded = dateInput?.value.trim() || null;
 
 			return { asin, title, subtitle, author, coverImage, dateAdded };
-		});
+		}, SELECTORS);
 	}
 
 	async clickBookLink(bookElement, index, total) {
@@ -60,18 +58,18 @@ class BookScraper {
 			console.log("🪲 Sample container HTML:", sample);
 		}
 
-		return this.page.evaluate(() => {
+		return this.page.evaluate((selectors) => {
 			const headers = Array.from(
-				document.querySelectorAll("#annotationHighlightHeader")
+				document.querySelectorAll(selectors.HIGHLIGHT_HEADER)
 			);
-			const notes = Array.from(document.querySelectorAll(".kp-notebook-note"));
+			const notes = Array.from(document.querySelectorAll(selectors.HIGHLIGHT_NOTE));
 			const blocks = Array.from(
-				document.querySelectorAll(".kp-notebook-highlight")
+				document.querySelectorAll(selectors.HIGHLIGHT)
 			);
 
 			return blocks
 				.map((blk, idx) => {
-					const quote = blk.querySelector("#highlight")?.innerText.trim() || "";
+					const quote = blk.querySelector(selectors.HIGHLIGHT_TEXT)?.innerText.trim() || "";
 
 					let color = null,
 						location = null;
@@ -93,7 +91,7 @@ class BookScraper {
 					return { quote, color, location, note };
 				})
 				.filter((o) => o.quote.length);
-		});
+		}, SELECTORS);
 	}
 }
 

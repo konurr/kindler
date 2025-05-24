@@ -2,7 +2,7 @@ const fs = require("fs");
 const puppeteer = require("puppeteer");
 const AuthManager = require("./lib/AuthManager");
 const BookScraper = require("./lib/BookScraper");
-const { CONFIG } = require("./config/constants");
+const { SELECTORS, CONFIG } = require("./config/constants");
 
 class KindleScraper {
 	constructor(config) {
@@ -35,17 +35,12 @@ class KindleScraper {
 
 			// Navigate to library and retrieve book list once
 			await this.page.goto(CONFIG.LOGIN_URL, { waitUntil: "networkidle2" });
-			await this.page.waitForSelector(".kp-notebook-library-each-book");
-			const books = await this.page.$$(".kp-notebook-library-each-book");
+			await this.page.waitForSelector(SELECTORS.BOOK_LIST);
+			const books = await this.page.$$(SELECTORS.BOOK_LIST);
 
 			// Iterate through books
 			for (let i = 0; i < totalBooks; i++) {
 				console.log(`📖 Opening book ${i + 1}/${totalBooks}`);
-
-				if (!books[i]) {
-					console.warn(`⚠️ Book ${i + 1} not found—skipping.`);
-					continue;
-				}
 
 				if (!books[i]) {
 					console.warn(`⚠️ Book ${i + 1} not found—skipping.`);

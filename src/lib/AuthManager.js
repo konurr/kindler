@@ -33,6 +33,7 @@ class AuthManager {
 		await this.page.click(SELECTORS.LOGIN.SUBMIT);
 
 		console.log("⏸ Complete 2FA manually...");
+		// Indefinite timeout is intentional to allow manual 2FA completion.
 		await this.page.waitForSelector(SELECTORS.BOOK_LIST, { timeout: 0 });
 
 		await this.saveCookies();
