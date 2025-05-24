@@ -1,6 +1,23 @@
 {
-  "dependencies": {
-    "dotenv": "^16.5.0",
-    "puppeteer": "^24.9.0"
-  }
+	"name": "kindler",
+	"version": "1.0.0",
+	"description": "Scrape Kindle highlights and notes",
+	"main": "kindler.js",
+	"scripts": {
+		"start": "node kindler.js",
+		"debug": "DEBUG=true node kindler.js",
+		"format": "prettier --write ."
+	},
+	"dependencies": {
+		"dotenv": "^16.5.0",
+		"puppeteer": "^24.9.0"
+	},
+	"devDependencies": {
+		"prettier": "^3.2.0"
+	},
+	"keywords": [
+		"kindle",
+		"automation",
+		"puppeteer"
+	]
 }

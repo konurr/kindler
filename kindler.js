@@ -4,10 +4,11 @@ const fs = require("fs");
 
 const EMAIL = process.env.EMAIL;
 const PASSWORD = process.env.PASSWORD;
+const DEBUG = String(process.env.DEBUG).toLowerCase() === "true";
 const COOKIES_PATH = "./cookies.json";
 
 (async () => {
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await puppeteer.launch({ headless: !DEBUG });
   const page = await browser.newPage();
 
   // Load cookies if available
@@ -129,7 +130,10 @@ const COOKIES_PATH = "./cookies.json";
     }
   }
 
-  console.log(JSON.stringify(allHighlights, null, 2));
+  if (DEBUG) {
+    console.log("🐛 Debug mode enabled: displaying highlights JSON");
+    console.log(JSON.stringify(allHighlights, null, 2));
+  }
   fs.writeFileSync(
     "highlights.json",
     JSON.stringify(allHighlights, null, 2),
