@@ -7,50 +7,38 @@ const PASSWORD = process.env.PASSWORD;
 const DEBUG = String(process.env.DEBUG).toLowerCase() === "true";
 const COOKIES_PATH = "./cookies.json";
 
-(async () => {
+;(async () => {
   const browser = await puppeteer.launch({ headless: !DEBUG });
   const page = await browser.newPage();
 
-  // Load cookies if available
+  // ─── Load cookies ─────────────────────────────────────────────
   if (fs.existsSync(COOKIES_PATH)) {
     const cookies = JSON.parse(fs.readFileSync(COOKIES_PATH, "utf8"));
     await page.setCookie(...cookies);
     console.log("✅ Loaded cookies from file.");
   }
 
-  // Go to Kindle notebook
-  await page.goto("https://read.amazon.com/notebook", {
-    waitUntil: "networkidle2",
-  });
-
-  // If login is needed
+  // ─── Navigate & login ────────────────────────────────────────
+  await page.goto("https://read.amazon.com/notebook", { waitUntil: "networkidle2" });
   if (page.url().includes("signin")) {
-    console.log("🔐 Not logged in, logging in...");
-    await page.waitForSelector("#ap_email", { visible: true });
+    console.log("🔐 Logging in...");
     await page.type("#ap_email", EMAIL);
     await page.click("#continue");
-
-    await page.waitForSelector("#ap_password", { visible: true });
     await page.type("#ap_password", PASSWORD);
     await page.click("#signInSubmit");
-
     console.log("⏸ Complete 2FA manually...");
-    await page.waitForSelector(".kp-notebook-library-each-book", {
-      timeout: 0,
-    });
-
-    const cookies = await page.cookies();
-    fs.writeFileSync(COOKIES_PATH, JSON.stringify(cookies, null, 2));
+    await page.waitForSelector(".kp-notebook-library-each-book", { timeout: 0 });
+    fs.writeFileSync(COOKIES_PATH, JSON.stringify(await page.cookies(), null, 2));
     console.log("💾 Session cookies saved.");
   } else {
     console.log("✅ Already logged in.");
   }
 
-  // Get number of books
+  // ─── Count books ──────────────────────────────────────────────
   await page.waitForSelector(".kp-notebook-library-each-book");
   const totalBooks = await page.$$eval(
     ".kp-notebook-library-each-book",
-    (books) => books.length,
+    (books) => books.length
   );
 
   const allHighlights = [];
@@ -58,87 +46,97 @@ const COOKIES_PATH = "./cookies.json";
   for (let i = 0; i < totalBooks; i++) {
     console.log(`📖 Opening book ${i + 1}/${totalBooks}`);
 
-    await page.goto("https://read.amazon.com/notebook", {
-      waitUntil: "networkidle2",
-    });
+    // Go back to library and re-select
+    await page.goto("https://read.amazon.com/notebook", { waitUntil: "networkidle2" });
     await page.waitForSelector(".kp-notebook-library-each-book");
-
     const books = await page.$$(".kp-notebook-library-each-book");
     if (!books[i]) {
-      console.warn(`⚠️ Book ${i + 1} not found. Skipping.`);
+      console.warn(`⚠️ Book ${i + 1} not found—skipping.`);
       continue;
     }
 
-    // ✅ Extract title and author from the library view
+    // Extract book-level meta
     const bookMeta = await books[i].evaluate((book) => {
+      const asin = book.id;
       const titleEl = book.querySelector("h2.kp-notebook-searchable");
       const authorEl = book.querySelector("p.kp-notebook-searchable");
-      let fullTitle = titleEl?.innerText.trim() || "Untitled";
-      let [title, subtitle] = fullTitle.split(/[:—-]/).map((s) => s.trim());
-      const author =
-        authorEl?.innerText.replace(/^By:\s*/, "").trim() || "Unknown";
-      return { title, subtitle, author };
+      const imgEl = book.querySelector("img.kp-notebook-cover-image");
+      const dateInput = book.querySelector(`input[id^="kp-notebook-annotated-date-"]`);
+
+      const fullTitle = titleEl?.innerText.trim() || "Untitled";
+      const [title, subtitle] = fullTitle.split(/[:—-]/).map((t) => t.trim());
+      const author = authorEl?.innerText.replace(/^By:\s*/, "").trim() || "Unknown";
+      const coverImage = imgEl?.src || null;
+      const dateAdded = dateInput?.value.trim() || null;
+
+      return { asin, title, subtitle, author, coverImage, dateAdded };
     });
 
+    // Click into the book
     try {
-      const clickable = await books[i].$("a.a-link-normal.a-text-normal");
-      if (!clickable) {
-        const outer = await books[i].evaluate((el) => el.outerHTML);
-        console.warn(
-          `⚠️ Could not find <a> to click in book ${i + 1}. HTML:\n${outer}`,
-        );
-        continue;
-      }
-
-      await clickable.evaluate((el) => {
-        el.scrollIntoView({ behavior: "instant", block: "center" });
-      });
-      await page.waitForFunction(
-        (el) => {
-          const rect = el.getBoundingClientRect();
-          return (
-            rect.top >= 0 &&
-            rect.left >= 0 &&
-            rect.bottom <=
-              (window.innerHeight || document.documentElement.clientHeight) &&
-            rect.right <=
-              (window.innerWidth || document.documentElement.clientWidth)
-          );
-        },
-        {},
-        clickable,
-      );
-      await page.evaluate((el) => el.click(), clickable);
+      const link = await books[i].$("a.a-link-normal.a-text-normal");
+      await link.evaluate((el) => el.scrollIntoView({ behavior: "instant", block: "center" }));
+      await page.evaluate((el) => el.click(), link);
     } catch (err) {
       console.warn(`⚠️ Could not click book ${i + 1}: ${err.message}`);
       continue;
     }
 
-    // 📚 Extract highlights only
+    // ─── Extract highlights + metadata ────────────────────────────
     try {
       await page.waitForSelector(".kp-notebook-highlight", { timeout: 10000 });
 
+      if (DEBUG) {
+        const sample = await page.$$eval(
+          ".kp-notebook-highlight",
+          (els) => els.slice(0, 2).map((h) => h.parentElement.innerHTML)
+        );
+        console.log("🪲 Sample container HTML:", sample);
+      }
+
       const highlights = await page.evaluate(() => {
-        return Array.from(document.querySelectorAll(".kp-notebook-highlight"))
-          .map((h) => h.innerText.trim())
-          .filter(Boolean);
+        // collect all headers and all highlight blocks
+        const headers = Array.from(document.querySelectorAll("#annotationHighlightHeader"));
+        const notes   = Array.from(document.querySelectorAll(".kp-notebook-note"));
+        const blocks  = Array.from(document.querySelectorAll(".kp-notebook-highlight"));
+
+        return blocks.map((blk, idx) => {
+          // text
+          const quote = blk.querySelector("#highlight")?.innerText.trim() || "";
+
+          // header metadata
+          let color = null, location = null;
+          const header = headers[idx];
+          if (header) {
+            const [cPart, locPart] = header.innerText.split("|").map((s) => s.trim());
+            color = cPart.replace(/ highlight$/i, "") || null;
+            const m = locPart.match(/Page:\s*(\d+)/i);
+            location = m ? m[1] : null;
+          }
+
+          // your note
+          const noteEl = notes[idx];
+          const note = noteEl ? noteEl.innerText.replace(/^Note:\s*/, "").trim() : null;
+
+          return { quote, color, location, note };
+        })
+        .filter((o) => o.quote.length);
       });
 
       allHighlights.push({ ...bookMeta, highlights });
     } catch (err) {
-      console.warn(`⚠️ Error scraping book ${i + 1}:`, err.message);
+      console.warn(`⚠️ Error scraping highlights for book ${i + 1}: ${err.message}`);
     }
   }
 
+  // Debug dump
   if (DEBUG) {
-    console.log("🐛 Debug mode enabled: displaying highlights JSON");
-    console.log(JSON.stringify(allHighlights, null, 2));
+    console.log("🐛 Full result:", JSON.stringify(allHighlights, null, 2));
   }
-  fs.writeFileSync(
-    "highlights.json",
-    JSON.stringify(allHighlights, null, 2),
-    "utf-8",
-  );
+
+  // Write out
+  fs.writeFileSync("highlights.json", JSON.stringify(allHighlights, null, 2), "utf-8");
   console.log("💾 highlights.json saved.");
+
   await browser.close();
 })();
