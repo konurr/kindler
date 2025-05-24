@@ -1,19 +1,19 @@
 # Kindler 📖🔍
 
-A Node.js tool to automatically scrape and export your Kindle highlights and notes from Amazon's Kindle Cloud Reader.
+A Node.js tool to automatically scrape and export your Kindle highlights and notes from Kindle Notebook.
 
 ## Features
 
-- 📚 Automatically scrapes all books in your Kindle library
+- 📚 Automatically scrapes all books in your Kindle library for book title, author, highlights and notes.
 - 🔐 Handles Amazon login (with 2FA support)
-  - Requires manual 2FA for now (you will need to enter the 2FA code sent to your device during login; ensure your device is accessible and check spam/junk folders if you don't receive the code)
+  - Currently requires manual 2FA
 - 🍪 Saves session cookies to avoid frequent re-logins
 - 📝 Exports highlights to JSON format
 - 🐛 Debug mode for troubleshooting
 
 ## Prerequisites
 
-- Node.js (>= 14.0.0)
+- Node.js
 - Amazon account with Kindle books
 - Kindle highlights/notes to export
 
@@ -21,10 +21,13 @@ A Node.js tool to automatically scrape and export your Kindle highlights and not
 
 1. Clone this repository
 2. Install dependencies:
+
 ```bash
 npm install
 ```
+
 3. Create a `.env` file with your credentials:
+
 ```properties
 EMAIL=your.email@example.com
 PASSWORD=your-password
@@ -60,12 +63,25 @@ The script generates a `highlights.json` file containing an array of books with 
 ```json
 [
   {
-    "title": "Book Title",
-    "subtitle": "Book Subtitle",
-    "author": "Author Name",
+    "asin": "EXAMPLEASIN1",
+    "title": "The Great Gatsby",
+    "subtitle": null,
+    "author": "F. Scott Fitzgerald",
+    "coverImage": "https://example.com/gatsby.jpg",
+    "dateAdded": "Monday January 1, 2024",
     "highlights": [
-      "Highlight 1",
-      "Highlight 2"
+      {
+        "quote": "So we beat on, boats against the current, borne back ceaselessly into the past.",
+        "color": "Yellow",
+        "location": "123",
+        "note": ""
+      },
+      {
+        "quote": "He smiled understandingly—much more than understandingly. It was one of those rare smiles with a quality of eternal reassurance in it, that you may come across four or five times in life.",
+        "color": "Yellow",
+        "location": "45",
+        "note": ""
+      }
     ]
   }
 ]
