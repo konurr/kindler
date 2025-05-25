@@ -2,6 +2,12 @@
 
 A Node.js tool to automatically scrape and export your Kindle highlights and notes from Kindle Notebook.
 
+![Progress bar and summary output demo](docs/demo.gif)
+
+> _Demo created using [VHS](https://github.com/charmbracelet/vhs)_
+
+
+
 ## Features
 
 - 📚 Automatically scrapes all books in your Kindle library for book title, author, highlights and notes.
