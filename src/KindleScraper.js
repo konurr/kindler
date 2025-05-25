@@ -3,6 +3,7 @@ const puppeteer = require("puppeteer");
 const AuthManager = require("./lib/AuthManager");
 const BookScraper = require("./lib/BookScraper");
 const { SELECTORS, CONFIG } = require("./config/constants");
+const cliProgress = require("cli-progress");
 
 class KindleScraper {
 	constructor(config) {
@@ -21,6 +22,14 @@ class KindleScraper {
 	}
 
 	async scrape() {
+		const startTime = Date.now();
+		let totalHighlights = 0;
+		const progressBar = new cliProgress.SingleBar({
+			format: 'Scraping |{bar}| {percentage}% | {value}/{total} books',
+			barCompleteChar: '\u2588',
+			barIncompleteChar: '-',
+			hideCursor: true
+		});
 		try {
 			// Handle authentication
 			await this.auth.loadCookies();
@@ -42,12 +51,13 @@ class KindleScraper {
 			}
 			const books = await this.page.$$(SELECTORS.BOOK_LIST);
 
+			progressBar.start(totalBooks, 0);
+
 			// Iterate through books
 			for (let i = 0; i < totalBooks; i++) {
-				console.log(`📖 Opening book ${i + 1}/${totalBooks}`);
-
 				if (!books[i]) {
 					console.warn(`⚠️ Book ${i + 1} not found—skipping.`);
+					progressBar.increment();
 					continue;
 				}
 
@@ -60,17 +70,24 @@ class KindleScraper {
 					i,
 					totalBooks
 				);
-				if (!clicked) continue;
+				if (!clicked) {
+					progressBar.increment();
+					continue;
+				}
 
 				try {
 					const highlights = await this.scraper.getHighlights();
 					allHighlights.push({ ...bookMeta, highlights });
+					totalHighlights += highlights.length;
 				} catch (err) {
 					console.warn(
 						`⚠️ Error scraping highlights for book ${i + 1}: ${err.message}`
 					);
 				}
+				progressBar.increment();
 			}
+
+			progressBar.stop();
 
 			// Save results
 			if (this.config.debug) {
@@ -82,8 +99,15 @@ class KindleScraper {
 				JSON.stringify(allHighlights, null, 2),
 				"utf-8"
 			);
-			console.log("💾 highlights.json saved.");
+			
+			const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+			console.log("\n--- Summary ---");
+			console.log(`Total books processed: ${totalBooks} 📚`);
+			console.log(`Total highlights processed: ${totalHighlights} ✍️`);
+			console.log(`Elapsed time: ${elapsed} seconds ⏱️`);
+			console.log("All highlights saved to highlights.json 💾");
 		} finally {
+			progressBar.stop();
 			await this.cleanup();
 		}
 	}
